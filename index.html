@@ -71,12 +71,17 @@
 
     <!-- Setup Section -->
     <div class="setup">
+      <label>Choose Game Mode:</label>
+      <select id="gameMode">
+        <option value="pvp">Player vs Player</option>
+        <option value="pvc">Player vs Computer</option>
+      </select>
       <input type="text" id="player1" placeholder="Enter Player 1 Name" />
-      <input type="text" id="player2" placeholder="Enter Player 2 Name" />
+      <input type="text" id="player2" placeholder="Enter Player 2 Name (or leave for Computer)" />
       <label style="margin-top:5px;">Choose Symbol:</label>
       <select id="playerSymbol">
-        <option value="X">Player 1 = X, Player 2 = O</option>
-        <option value="O">Player 1 = O, Player 2 = X</option>
+        <option value="X">Player 1 = X, Player 2/Computer = O</option>
+        <option value="O">Player 1 = O, Player 2/Computer = X</option>
       </select>
       <button class="btn" id="startBtn">Start Game</button>
     </div>
@@ -108,13 +113,14 @@
     const player1Input = document.getElementById("player1");
     const player2Input = document.getElementById("player2");
     const symbolSelect = document.getElementById("playerSymbol");
+    const gameModeSelect = document.getElementById("gameMode");
     const p1ScoreEl = document.getElementById("p1Score");
     const p2ScoreEl = document.getElementById("p2Score");
     const drawsEl = document.getElementById("draws");
     const historyEl = document.getElementById("history");
     const scoreboard = document.getElementById("scoreboard");
 
-    let currentPlayer, p1Symbol, p2Symbol;
+    let currentPlayer, p1Symbol, p2Symbol, gameMode;
     let gameActive = false;
     let gameState = ["", "", "", "", "", "", "", "", ""];
     let scores = { p1: 0, p2: 0, draw: 0 };
@@ -127,8 +133,9 @@
     ];
 
     function startGame() {
+      gameMode = gameModeSelect.value;
       player1 = player1Input.value || "Player 1";
-      player2 = player2Input.value || "Player 2";
+      player2 = (gameMode === "pvc") ? "Computer" : (player2Input.value || "Player 2");
       p1Symbol = symbolSelect.value;
       p2Symbol = p1Symbol === "X" ? "O" : "X";
       currentPlayer = p1Symbol;
@@ -145,7 +152,7 @@
       board.innerHTML = "";
       gameState = ["", "", "", "", "", "", "", "", ""];
       winnerText.innerText = "";
-      gameActive = true; // ✅ Important fix for next rounds
+      gameActive = true;
       for (let i = 0; i < 9; i++) {
         const cell = document.createElement("div");
         cell.classList.add("cell");
@@ -158,11 +165,19 @@
     function handleCellClick(e) {
       const index = e.target.getAttribute("data-index");
       if (gameState[index] !== "" || !gameActive) return;
-      gameState[index] = currentPlayer;
-      e.target.innerText = currentPlayer;
+      makeMove(index, currentPlayer);
+
+      if (gameMode === "pvc" && gameActive && currentPlayer === p2Symbol) {
+        setTimeout(computerMove, 500); // Small delay for realism
+      }
+    }
+
+    function makeMove(index, player) {
+      gameState[index] = player;
+      document.querySelector(`[data-index='${index}']`).innerText = player;
 
       if (checkWinner()) {
-        const winnerName = currentPlayer === p1Symbol ? player1 : player2;
+        const winnerName = player === p1Symbol ? player1 : player2;
         winnerText.innerText = `🎉 ${winnerName} Wins!`;
         if (winnerName === player1) scores.p1++;
         else scores.p2++;
@@ -181,7 +196,14 @@
         return;
       }
 
-      currentPlayer = currentPlayer === p1Symbol ? p2Symbol : p1Symbol;
+      currentPlayer = (player === p1Symbol) ? p2Symbol : p1Symbol;
+    }
+
+    function computerMove() {
+      let emptyCells = gameState.map((val, i) => val === "" ? i : null).filter(i => i !== null);
+      if (emptyCells.length === 0) return;
+      let randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      makeMove(randomIndex, p2Symbol);
     }
 
     function checkWinner() {
